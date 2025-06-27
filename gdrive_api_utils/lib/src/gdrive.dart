@@ -103,21 +103,19 @@ class GDrive {
     var ioFile = File(filePath);
     gd.File? result;
     if (existingId != null) {
-      var file =
-          gd.File()
-            ..name = basename(filePath)
-            ..mimeType = mimeType;
+      var file = gd.File()
+        ..name = basename(filePath)
+        ..mimeType = mimeType;
       result = await driveApi.files.update(
         file,
         existingId,
         uploadMedia: gd.Media(ioFile.openRead(), ioFile.statSync().size),
       );
     } else {
-      var file =
-          gd.File()
-            ..name = basename(filePath)
-            ..parents = [folderId]
-            ..mimeType = mimeType;
+      var file = gd.File()
+        ..name = basename(filePath)
+        ..parents = [folderId]
+        ..mimeType = mimeType;
       result = await driveApi.files.create(
         file,
         enforceSingleParent: true,
