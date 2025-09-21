@@ -14,7 +14,6 @@ dependencies:
   tekartik_io_auth_utils:
     git:
       url: https://github.com/tekartik/io_auth_utils.dart
-      ref: dart3a
   # path: ^1.8.0
 
 dev_dependencies:
