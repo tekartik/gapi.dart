@@ -11,6 +11,7 @@ dependencies:
   googleapis: any
   http: any
   path: ">=1.9.0"
+  googleapis_auth:
   tekartik_io_auth_utils:
     git:
       url: https://github.com/tekartik/io_auth_utils.dart

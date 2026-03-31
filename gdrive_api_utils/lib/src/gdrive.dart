@@ -23,7 +23,7 @@ class GDrive {
   /// Drive api
   late final driveApi = gd.DriveApi(client);
 
-  /// List files
+  /// List files - compat
   Future<void> listFiles({required String folderId}) async {
     var files = await driveApi.files.list(
       pageSize: 100,
@@ -33,6 +33,28 @@ class GDrive {
       // ignore: avoid_print
       print('${file.name} ${file.mimeType} ${file.id}');
     }
+  }
+
+  /// Get a single file
+  Future<Object> getFile(String fileId) async {
+    return await driveApi.files.get(fileId);
+  }
+
+  /// Get files
+  Future<gd.FileList> getFiles({
+    required String folderId,
+    String? pageToken,
+
+    /// default to 100
+    int? pageSize,
+  }) async {
+    pageSize ??= 100;
+    var files = await driveApi.files.list(
+      pageSize: pageSize,
+      q: "'$folderId' in parents and trashed = false",
+      pageToken: pageToken,
+    );
+    return files;
   }
 
   /// Delete a single file
