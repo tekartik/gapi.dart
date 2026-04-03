@@ -1,5 +1,6 @@
 // ignore_for_file: depend_on_referenced_packages
 
+import 'dart:async';
 import 'dart:io';
 import 'package:cv/cv_json.dart';
 import 'package:googleapis/drive/v3.dart' as gd;
@@ -15,16 +16,32 @@ class GDrive {
   static const folderMimeType = 'application/vnd.google-apps.folder';
 
   /// Auth client
-  final Client client;
+  late final Client client;
+
+  final _readyCompleter = Completer<bool>();
+
+  /// True when ready
+  Future<bool> get ready => _readyCompleter.future;
 
   /// Constructor
-  GDrive({required this.client});
+  GDrive({required this.client}) {
+    _readyCompleter.complete(true);
+  }
+
+  /// ready must be called first
+  GDrive.future({required Future<Client> client}) {
+    client.then((value) {
+      this.client = value;
+      _readyCompleter.complete(true);
+    });
+  }
 
   /// Drive api
   late final driveApi = gd.DriveApi(client);
 
   /// List files - compat
   Future<void> listFiles({required String folderId}) async {
+    await ready;
     var files = await driveApi.files.list(
       pageSize: 100,
       q: "'$folderId' in parents and trashed = false",
@@ -37,6 +54,7 @@ class GDrive {
 
   /// Get a single file
   Future<Object> getFile(String fileId) async {
+    await ready;
     return await driveApi.files.get(fileId);
   }
 
@@ -48,6 +66,7 @@ class GDrive {
     /// default to 100
     int? pageSize,
   }) async {
+    await ready;
     pageSize ??= 100;
     var files = await driveApi.files.list(
       pageSize: pageSize,
@@ -59,6 +78,7 @@ class GDrive {
 
   /// Delete a single file
   Future<void> deleteFile(String fileId) async {
+    await ready;
     await driveApi.files.delete(fileId);
   }
 
@@ -71,6 +91,7 @@ class GDrive {
     required String folderId,
     required String filename,
   }) async {
+    await ready;
     var files = await driveApi.files.list(
       pageSize: 10,
       q: _queryByParentAndName(folderId, filename),
@@ -86,6 +107,7 @@ class GDrive {
     required String folderId,
     required String filename,
   }) async {
+    await ready;
     var files = await driveApi.files.list(
       pageSize: 100,
       q: _queryByParentAndName(folderId, filename),
@@ -101,6 +123,7 @@ class GDrive {
     required String folderId,
     required String filename,
   }) async {
+    await ready;
     var files = await driveApi.files.list(
       pageSize: 10,
       q: _queryByParentAndName(folderId, filename),
@@ -117,6 +140,7 @@ class GDrive {
     required String filePath,
     required String mimeType,
   }) async {
+    await ready;
     var existingId = await findFileInDrive(
       folderId: folderId,
       filename: basename(filePath),
