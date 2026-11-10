@@ -7,7 +7,8 @@ import 'package:googleapis/drive/v3.dart' as gd;
 import 'package:http/http.dart';
 import 'package:path/path.dart';
 
-/// GDrive helper
+/// Google Drive helper on an authenticated client: [GDrive.new], or
+/// [GDrive.future] while the client is created.
 class GDrive {
   /// Google doc mime type
   static const documentMimeType = 'application/vnd.google-apps.document';
@@ -28,12 +29,19 @@ class GDrive {
     _readyCompleter.complete(true);
   }
 
-  /// ready must be called first
+  /// ready must be called first, it fails with the error of [client].
   GDrive.future({required Future<Client> client}) {
-    client.then((value) {
-      this.client = value;
-      _readyCompleter.complete(true);
-    });
+    // Not an uncaught error when nobody awaits ready, later awaits still fail.
+    ready.ignore();
+    client.then(
+      (value) {
+        this.client = value;
+        _readyCompleter.complete(true);
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        _readyCompleter.completeError(error, stackTrace);
+      },
+    );
   }
 
   /// Drive api
@@ -44,7 +52,7 @@ class GDrive {
     await ready;
     var files = await driveApi.files.list(
       pageSize: 100,
-      q: "'$folderId' in parents and trashed = false",
+      q: '${_queryString(folderId)} in parents and trashed = false',
     );
     for (var file in files.files!) {
       // ignore: avoid_print
@@ -70,7 +78,7 @@ class GDrive {
     pageSize ??= 100;
     var files = await driveApi.files.list(
       pageSize: pageSize,
-      q: "'$folderId' in parents and trashed = false",
+      q: '${_queryString(folderId)} in parents and trashed = false',
       pageToken: pageToken,
     );
     return files;
@@ -82,11 +90,15 @@ class GDrive {
     await driveApi.files.delete(fileId);
   }
 
+  /// Drive query string literal: `\` and `'` are escaped.
+  String _queryString(String value) =>
+      "'${value.replaceAll(r'\', r'\\').replaceAll("'", r"\'")}'";
+
   String _queryByParentAndName(String folderId, String filename) {
-    return "'$folderId' in parents and name='$filename' and trashed = false";
+    return '${_queryString(folderId)} in parents and name=${_queryString(filename)} and trashed = false';
   }
 
-  /// Find file in drive
+  /// Find a file by name in a folder (not trashed), its id or null.
   Future<String?> findFileInDrive({
     required String folderId,
     required String filename,
@@ -102,7 +114,8 @@ class GDrive {
     return files.files!.first.id;
   }
 
-  /// Delete files by name
+  /// Delete the files named [filename] in a folder (100 at most), returns
+  /// the number deleted.
   Future<int> deleteFilesByName({
     required String folderId,
     required String filename,
@@ -118,7 +131,7 @@ class GDrive {
     return files.files!.length;
   }
 
-  /// Find file in drive
+  /// Ids of the files named [filename] in a folder (10 at most).
   Future<List<String>> findFilesInDrive({
     required String folderId,
     required String filename,
@@ -134,7 +147,7 @@ class GDrive {
     return files.files!.map((file) => file.id).nonNulls.toList();
   }
 
-  /// Copy file to drive
+  /// Upload [filePath] to a folder, replacing the file with the same name.
   Future<void> copyFileToDrive({
     required String folderId,
     required String filePath,

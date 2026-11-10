@@ -52,7 +52,8 @@ everything else.
   target folder with its `client_email` first.
 * Build the helper with `GDrive(client: client)`, or `GDrive.future(client:
   futureClient)` when the client is still being created; in that case await
-  `drive.ready` (every method already awaits it internally). Close the
+  `drive.ready` (every method already awaits it internally). When the client
+  future fails, `ready` and every method fail with its error. Close the
   underlying client when the program is done.
 * Folder ids: `'root'` is the user's My Drive root; otherwise take the id from
   the Drive url (`https://drive.google.com/drive/folders/<folderId>`). Queries
@@ -65,16 +66,19 @@ everything else.
     nothing — a debug helper, use `getFiles` in code.
   * `getFile(fileId)` returns `Future<Object>`; cast it to `gd.File`.
   * `findFileInDrive({folderId, filename})` → the first matching id or `null`;
-    `findFilesInDrive(...)` → every matching id (Drive allows duplicate names).
-  * `deleteFile(fileId)`, `deleteFilesByName({folderId, filename})` (returns
-    how many were deleted).
+    `findFilesInDrive(...)` → the matching ids, 10 at most (Drive allows
+    duplicate names). Any file name works: `'` and `\` are escaped in the
+    query.
+  * `deleteFile(fileId)`, `deleteFilesByName({folderId, filename})` (deletes
+    100 at most per call, returns how many were deleted).
   * `copyFileToDrive({folderId, filePath, mimeType})` uploads a local file
     under its basename; if a file with that name already exists in the folder
     it is *updated* instead of duplicated. It prints the resulting metadata.
   * `GDrive.folderMimeType` (`application/vnd.google-apps.folder`) and
     `GDrive.documentMimeType` (`application/vnd.google-apps.document`).
 * Anything else (create a folder, download media, export a Google doc, shared
-  drives, permissions) goes through `drive.driveApi`, the plain
+  drives: the helpers do not pass `supportsAllDrives`, permissions) goes
+  through `drive.driveApi`, the plain
   `package:googleapis` `DriveApi`; add `googleapis` to your own dependencies
   when you name its types (`import 'package:googleapis/drive/v3.dart' as gd;`).
 * Google Docs: `GDocsClient(client: client).docsApi` is the `DocsApi`. The
